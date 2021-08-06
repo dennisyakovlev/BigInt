@@ -334,13 +334,9 @@ BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
         _ull carry = 0;
         for (auto s_iter = shorter->digits.crbegin(); s_iter != shorter->digits.crend(); ++l_iter, ++s_iter, ++new_digits) {
             _ull result = (*l_iter - carry) - *s_iter;
-            carry = (result >> BASE_BIN_LENGTH) & 1; // why is & 1 here?
+            carry = (result >> BASE_BIN_LENGTH) & 1; // if carry is needed, then & 1 will always produce 1
             *new_digits = (result << BASE_BIN_LENGTH) >> BASE_BIN_LENGTH;
         }
-
-        // instead shift the carry 63 bits right, which will be 1
-        // new_digits is just result - carry
-        // shift carry after new_digits
 
         for (; l_iter != longer->digits.crend(); ++l_iter, ++new_digits) {
             _ull result = *l_iter - carry;
