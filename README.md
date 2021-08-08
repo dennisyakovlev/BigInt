@@ -1,10 +1,21 @@
-# BigInt
-C++ library for larger than natively supported unsigned integer operations 
+# BigUnsignedInt library
 
-Supports +, -, *, and / operations.
+## Contents
 
-Made because GNU MP library doesnt compile on windows and I just needed something which would allow for a couple hundred digits.
+* [Aim](#Project-aim)
+* [Usage](#Usage)
+* [Algorithms](#Algorithms)
 
-BigInt.h is the working file.
+## Project aim
 
-To see if working properly call run_tests in test.h and check output log
+C++ library for larger than natively supported unsigned integer operations. Meant to be used in any project and operating system easily. Not a replacement for the GNU MP library.
+
+## Usage
+
+BigInt.h is latest file which works. Copy and paste into wherever and compile with the project.
+**Note**: Requires c++17 or higher.
+
+## Algorithms
+
+Be warned all algorithms were created from scratch, they are not the most efficient out there.
+Explain all algorithms
