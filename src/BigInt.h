@@ -1,3 +1,4 @@
+// Author: Dennis Yakovlev
 #pragma once
 #include <algorithm>
 #include <cmath>
@@ -59,9 +60,10 @@ private:
 
     }
 
+    // convert from base 10 to desired base
     void _create(cont_ui::iterator digit_local_iter, sz_ty_ui size_local) {
 
-        std::list<_ull> digits_local;
+        std::list<_ull> digits_local; // to not have to preallocate required size
 
         while (size_local >= BASE_DIGITS) {
             _ull starting_num = _unchecked_to_num(digit_local_iter, digit_local_iter + BASE_DIGITS - 1);
@@ -277,7 +279,7 @@ bool operator>= (const BigUnsigned& l, const BigUnsigned& r) {
 
 }
 
-// theta(max(l.size(), r.size()))
+// theta(max(l.size, r.size))
 BigUnsigned operator+ (const BigUnsigned& l, const BigUnsigned& r) {
 
     auto longer = ::_longer(&l, &r);
@@ -310,7 +312,7 @@ BigUnsigned operator+ (const BigUnsigned& l, const BigUnsigned& r) {
 
 }
 
-// theta(max(l.size(), r.size()))
+// theta(max(l.size, r.size))
 // note: doesnt care about order, the shorter number will be subtracted
 // from the longer one, and if same length then smaller from larger
 BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
@@ -364,7 +366,7 @@ BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
 
 }
 
-// theta(2 * l.size() * r.size()) pre slow
+// theta(2 * l.size * r.size) pre slow
 // i dont care enough to use a fast multiplication algorithm since i dont care enough
 // if needed will implement
 BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
@@ -395,8 +397,8 @@ BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
 }
 
 // Meant for positive only
-// Always returns lowest integer
-BigUnsigned divide_digit_temp(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
+// Always returns lowest integer *i had this here for a reason but now i forget*
+BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
 
     BigUnsigned res(std::distance(start, end));
     auto iter_res = res.digits.begin();
@@ -416,12 +418,12 @@ BigUnsigned divide_digit_temp(typename BigUnsigned::cont_ull::const_iterator sta
 
 BigUnsigned divide(const BigUnsigned* const remainder, const BigUnsigned* const denom, const _ull digit) {
 
-    return divide_digit_temp(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
+    return divide_digit(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
 
 }
 
 // theta(c * n.size * operator*) really slow
-// c is some constant i dont care enough to figure out since its close to 1
+// c is some constant which is negligible since its close to 1
 // i dont care enough to use a fast division algorithm since they all require decimals
 // if needed will implement
 BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
@@ -436,7 +438,7 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
         auto qn = q - (divide(&r, &d, a) + BigUnsigned("1")); // add 1 since r is technically negative
                                                               // because of the zeros at the start of the number
         auto sum = q + qn;
-        q = divide_digit_temp(sum.digits.cbegin(), sum.digits.cend(), 2);
+        q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
     }
 
     return q;

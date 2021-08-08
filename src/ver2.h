@@ -1,3 +1,4 @@
+// Author: Dennis Yakovlev
 #pragma once
 #include <algorithm>
 #include <cmath>

@@ -1,5 +1,6 @@
+// Author: Dennis Yakovlev
 #pragma once
-#include <vars.h>
+#include <vars.h> // a missing local file
 #include <algorithm>
 #include <functional>
 #include <iterator>
