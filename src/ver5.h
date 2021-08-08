@@ -145,14 +145,6 @@ public:
     }
 
     explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {}
-    
-    BigUnsigned(const BigUnsigned& r) = default;
-
-    BigUnsigned(BigUnsigned&& r) : digits(std::move(r.digits)) {}
-
-    BigUnsigned& operator= (const BigUnsigned& r) = default;
-
-    ~BigUnsigned() = default;
 
     // remove the leading 0's
     void resize_to_fit() {
