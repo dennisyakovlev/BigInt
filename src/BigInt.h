@@ -88,6 +88,8 @@ private:
 
 public:
 
+    explicit BigUnsigned() : digits() {}
+
     template<typename Integral, unsigned int N, typename = _integral_unsigned<Integral>>
     explicit BigUnsigned(Integral(&arr)[N]) {
 
@@ -142,8 +144,22 @@ public:
 
     }
 
-    explicit BigUnsigned(sz_ty_ull size) : digits(size) {}
-    
+    explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {}
+
+    // remove the leading 0's
+    void resize_to_fit() {
+
+        auto iter = std::find_if_not(digits.cbegin(), digits.cend(), [](auto i) {
+            return i == 0;
+        });
+
+        if (iter != digits.cbegin()) {
+            cont_ull temp(iter, digits.cend());
+            digits = std::move(temp);
+        }
+
+    }
+
     cont_ull digits;
 
 };
@@ -171,7 +187,7 @@ inline auto _shorter(const BigUnsigned* const l, const BigUnsigned* const r) {
 
 }
 
-auto _longer_digits(const BigUnsigned* const l, const BigUnsigned* const r) {
+inline auto _longer_digits(const BigUnsigned* const l, const BigUnsigned* const r) {
 
     return std::max(l, r, [](auto l, auto r) {
         return l->digits.size() < r->digits.size();
@@ -236,43 +252,38 @@ bool operator<= (const BigUnsigned& l, const BigUnsigned& r) {
         ++r_iter;
     }
     
-    return *l_iter <= *r_iter;
+    return *l_iter <= *r_iter || (l_iter == l.digits.cend());
 
 }
 
 bool operator>= (const BigUnsigned& l, const BigUnsigned& r) {
 
-    auto l_iter = std::find_if_not(l.digits.cbegin(), l.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-    auto r_iter = std::find_if_not(r.digits.cbegin(), r.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-
-    _ui l_len = l.digits.cend() - l_iter;
-    _ui r_len = r.digits.cend() - r_iter;
+    _ui l_len = l.digits.size();
+    _ui r_len = r.digits.size();
     if (l_len > r_len) {
         return true;
     } else if (l_len < r_len) {
         return false;
     }
 
-    while (l_iter != l.digits.cend() && *l_iter == *r_iter) {
+    auto l_iter = l.digits.cbegin();
+    auto r_iter = r.digits.cbegin();
+    while (*l_iter == *r_iter && l_iter != l.digits.cend()) {
         ++l_iter;
         ++r_iter;
     }
 
-    return *l_iter >= *r_iter;
+    return (*l_iter >= *r_iter) || (l_iter == l.digits.cend());
 
 }
 
-// theta(max(l.digits.size(), r.digits.size()))
+// theta(max(l.size(), r.size()))
 BigUnsigned operator+ (const BigUnsigned& l, const BigUnsigned& r) {
 
     auto longer = ::_longer(&l, &r);
     auto shorter = ::_shorter(&l, &r);
 
-    BigUnsigned result(longer->digits.size());
+    BigUnsigned result(longer->digits.size() + 1);
     auto new_digits = result.digits.rbegin();
 
     auto l_iter = longer->digits.crbegin();
@@ -293,11 +304,13 @@ BigUnsigned operator+ (const BigUnsigned& l, const BigUnsigned& r) {
         result.digits.emplace(result.digits.cbegin(), carry);
     }
 
+    result.resize_to_fit();
+
     return result;
 
 }
 
-// theta(max(l.digits.size(), r.digits.size()))
+// theta(max(l.size(), r.size()))
 // note: doesnt care about order, the shorter number will be subtracted
 // from the longer one, and if same length then smaller from larger
 BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
@@ -314,7 +327,7 @@ BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
 
         if (l > r) {
             _ull carry = 0;
-            for (; l_iter != l.digits.crend(); ++l_iter, ++r_iter, ++new_digits) {
+            for (; l_iter != l.digits.crend(); ++l_iter, ++r_iter, ++new_digits) { // issue is crend includes the 0's need to get rid of the 0's somehow
                 _ull result = (*l_iter - carry) - *r_iter;
                 carry = (result >> BASE_BIN_LENGTH) & 1;
                 *new_digits = (result << BASE_BIN_LENGTH) >> BASE_BIN_LENGTH;
@@ -345,11 +358,13 @@ BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
         }
     }
 
+    result.resize_to_fit();
+
     return result;
 
 }
 
-// theta(2 * l.digits.size() * r.digits.size()) pre slow
+// theta(2 * l.size() * r.size()) pre slow
 // i dont care enough to use a fast multiplication algorithm since i dont care enough
 // if needed will implement
 BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
@@ -393,23 +408,33 @@ BigUnsigned divide_digit_temp(typename BigUnsigned::cont_ull::const_iterator sta
         carry = *start - (digit * *iter_res); 
     }
 
+    res.resize_to_fit();
+
     return res;
 
 }
 
-// theta(n.size * operator*) really slow
+BigUnsigned divide(const BigUnsigned* const remainder, const BigUnsigned* const denom, const _ull digit) {
+
+    return divide_digit_temp(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
+
+}
+
+// theta(c * n.size * operator*) really slow
+// c is some constant i dont care enough to figure out since its close to 1
 // i dont care enough to use a fast division algorithm since they all require decimals
 // if needed will implement
 BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
 
     _ui m = d.digits.size() - 1;
     _ull a = *d.digits.cbegin();
-    BigUnsigned q = divide_digit_temp(n.digits.cbegin(), n.digits.cbegin() + (n.digits.size() - d.digits.size() + 1), a);
+    BigUnsigned q = divide(&n, &d, a);
     BigUnsigned r = d;
 
     while (r >= d) {
-        r = n - (q * d);
-        auto qn = q - (divide_digit_temp(r.digits.cbegin(), r.digits.cbegin() + (r.digits.size() - d.digits.size() + 1), a) + BigUnsigned("1")); // add 1 since r is technically negative
+        r = n - (q * d);        
+        auto qn = q - (divide(&r, &d, a) + BigUnsigned("1")); // add 1 since r is technically negative
+                                                              // because of the zeros at the start of the number
         auto sum = q + qn;
         q = divide_digit_temp(sum.digits.cbegin(), sum.digits.cend(), 2);
     }
