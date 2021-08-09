@@ -1,6 +1,7 @@
 // Author: Dennis Yakovlev
 #pragma once
 #include <ver5.h> // include latest working version
+                  // change to BigInt.h
 #include <algorithm>
 #include <fstream>
 #include <iostream>

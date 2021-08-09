@@ -89,6 +89,8 @@ private:
 
         std::copy(digits_local.cbegin(), digits_local.cend(), std::back_inserter(digits));
 
+        resize_to_fit();
+
     }
 
 public:
@@ -365,7 +367,7 @@ BigUnsigned operator- (const BigUnsigned& l, const BigUnsigned& r) {
 
 }
 
-// theta(2 * l.size * r.size) pre slow
+// theta(2 * l.size * r.size) really slow
 // i dont care enough to use a fast multiplication algorithm since i dont care enough
 // if needed will implement
 BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
@@ -449,10 +451,11 @@ BigUnsigned divide_neg(const BigUnsigned* const remainder, const BigUnsigned* co
 
 }
 
-// theta(c * n.size * operator*) really slow
-// c is some constant which is negligible since its close to 1
+// theta(c * n.size * operator*) slow
+// c is some constant which is < 1
 // i dont care enough to use a fast division algorithm since they all require decimals
 // if needed will implement
+// Note: To use n >= d
 BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
 
     _ui m = d.digits.size() - 1;
