@@ -25,12 +25,15 @@ constexpr _ui BASE_DIGITS = static_cast<_ui>((std::numeric_limits<_ull>::digits1
 constexpr _ui BASE_DIGITS_ALLOW = BASE_DIGITS - 1; // maximum number of digits allowed to be stored
                                                    // store one less than allowed digits to allow initialization
                                                    // without an if statement to see if number fits into digit
+                                                   // Ex: 9999999999 doesnt fit into base 2^32 but 999999999 does
 
 // ty must be integral and unsigned type
 template<typename ty, typename = std::enable_if_t<std::is_integral_v<ty> && std::is_unsigned_v<ty>>>
 struct _integral_unsigned {};
 
 class BigUnsigned {
+    // call resize_to_fit to ensure leading zeros are gone is using sz_ty_ull constructor
+    // since all operations assume there are NO leading zeros
 public:
 
     using cont_ull = std::vector<_ull>; // must have bi-directional iterator at least
@@ -146,9 +149,10 @@ public:
 
     }
 
-    explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {}
+    explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {} // initialize to 0's to allow remove of extra ones
 
     // remove the leading 0's
+    // if all 0's results in empty digits
     void resize_to_fit() {
 
         auto iter = std::find_if_not(digits.cbegin(), digits.cend(), [](auto i) {
@@ -234,27 +238,22 @@ bool operator> (const BigUnsigned& l, const BigUnsigned& r) {
 
 bool operator<= (const BigUnsigned& l, const BigUnsigned& r) {
 
-    auto l_iter = std::find_if_not(l.digits.cbegin(), l.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-    auto r_iter = std::find_if_not(r.digits.cbegin(), r.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-
-    _ui l_len = l.digits.cend() - l_iter;
-    _ui r_len = r.digits.cend() - r_iter;
+    _ui l_len = l.digits.size();
+    _ui r_len = r.digits.size();
     if (l_len > r_len) {
         return false;
     } else if (l_len < r_len) {
         return true;
     }
 
-    while (l_iter != l.digits.cend() && *l_iter == *r_iter) {
+    auto l_iter = l.digits.cbegin();
+    auto r_iter = r.digits.cbegin();
+    while (*l_iter == *r_iter && l_iter != l.digits.cend()) {
         ++l_iter;
         ++r_iter;
     }
-    
-    return *l_iter <= *r_iter || (l_iter == l.digits.cend());
+
+    return (*l_iter <= *r_iter) || (l_iter == l.digits.cend());
 
 }
 
@@ -397,7 +396,6 @@ BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
 }
 
 // Meant for positive only
-// Always returns lowest integer *i had this here for a reason but now i forget*
 BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
 
     BigUnsigned res(std::distance(start, end));
@@ -407,6 +405,7 @@ BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, t
 
     for (; start != end; ++start, ++iter_res) {
         *iter_res = (*start + (carry * BASE)) / digit;
+        // std::cout << "info: " << *iter_res << " " << *start << " " << digit << std::endl;
         carry = *start - (digit * *iter_res); 
     }
 
@@ -422,6 +421,34 @@ BigUnsigned divide(const BigUnsigned* const remainder, const BigUnsigned* const 
 
 }
 
+// Meant for negative only
+BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
+
+    BigUnsigned res(std::distance(start, end));
+    auto iter_res = res.digits.begin();
+
+    _ull carry = 0;
+
+    for (; start != end - 1; ++start, ++iter_res) {
+        *iter_res = (*start + (carry * BASE)) / digit;
+        // std::cout << "info: " << *iter_res << " " << *start << " " << digit << std::endl;
+        carry = *start - (digit * *iter_res); 
+    }
+    
+    *iter_res = (*start + digit + (carry * BASE)) / digit; // add digit since when negative integers rounded down is the same as rounding up when positive
+
+    res.resize_to_fit();
+
+    return res;
+
+}
+
+BigUnsigned divide_neg(const BigUnsigned* const remainder, const BigUnsigned* const denom, const _ull digit) {
+
+    return divide_digit_neg(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
+
+}
+
 // theta(c * n.size * operator*) really slow
 // c is some constant which is negligible since its close to 1
 // i dont care enough to use a fast division algorithm since they all require decimals
@@ -431,12 +458,16 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
     _ui m = d.digits.size() - 1;
     _ull a = *d.digits.cbegin();
     BigUnsigned q = divide(&n, &d, a);
+    q.resize_to_fit();
     BigUnsigned r = d;
 
+    if (n > q * d) { // division is complete
+        return q;
+    }
+
     while (r >= d) {
-        r = n - (q * d);        
-        auto qn = q - (divide(&r, &d, a) + BigUnsigned("1")); // add 1 since r is technically negative
-                                                              // because of the zeros at the start of the number
+        r = n - (q * d);     
+        auto qn = q - divide_neg(&r, &d, a); 
         auto sum = q + qn;
         q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
     }

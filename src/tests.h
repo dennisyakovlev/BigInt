@@ -335,7 +335,7 @@ void test_12_1() {
 void test_13_1() {
 
     BigUnsigned num_1 = BigUnsigned(num_nine_nine) - BigUnsigned(num_nine_nine);
-    vec vec_1 = {0};
+    vec vec_1 = {};
 
     insert_result(Test_Info(13, 1), num_1, vec_1);
 

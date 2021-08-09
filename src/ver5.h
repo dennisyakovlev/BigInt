@@ -25,12 +25,15 @@ constexpr _ui BASE_DIGITS = static_cast<_ui>((std::numeric_limits<_ull>::digits1
 constexpr _ui BASE_DIGITS_ALLOW = BASE_DIGITS - 1; // maximum number of digits allowed to be stored
                                                    // store one less than allowed digits to allow initialization
                                                    // without an if statement to see if number fits into digit
+                                                   // Ex: 9999999999 doesnt fit into base 2^32 but 999999999 does
 
 // ty must be integral and unsigned type
 template<typename ty, typename = std::enable_if_t<std::is_integral_v<ty> && std::is_unsigned_v<ty>>>
 struct _integral_unsigned {};
 
 class BigUnsigned {
+    // call resize_to_fit to ensure leading zeros are gone is using sz_ty_ull constructor
+    // since all operations assume there are NO leading zeros
 public:
 
     using cont_ull = std::vector<_ull>; // must have bi-directional iterator at least
@@ -146,7 +149,7 @@ public:
 
     }
 
-    explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {}
+    explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {} // initialize to 0's to allow remove of extra ones
 
     // remove the leading 0's
     // if all 0's results in empty digits
@@ -235,27 +238,22 @@ bool operator> (const BigUnsigned& l, const BigUnsigned& r) {
 
 bool operator<= (const BigUnsigned& l, const BigUnsigned& r) {
 
-    auto l_iter = std::find_if_not(l.digits.cbegin(), l.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-    auto r_iter = std::find_if_not(r.digits.cbegin(), r.digits.cend(), [](auto i) {
-        return i == 0;
-    });
-
-    _ui l_len = l.digits.cend() - l_iter;
-    _ui r_len = r.digits.cend() - r_iter;
+    _ui l_len = l.digits.size();
+    _ui r_len = r.digits.size();
     if (l_len > r_len) {
         return false;
     } else if (l_len < r_len) {
         return true;
     }
 
-    while (l_iter != l.digits.cend() && *l_iter == *r_iter) {
+    auto l_iter = l.digits.cbegin();
+    auto r_iter = r.digits.cbegin();
+    while (*l_iter == *r_iter && l_iter != l.digits.cend()) {
         ++l_iter;
         ++r_iter;
     }
-    
-    return *l_iter <= *r_iter || (l_iter == l.digits.cend());
+
+    return (*l_iter <= *r_iter) || (l_iter == l.digits.cend());
 
 }
 
