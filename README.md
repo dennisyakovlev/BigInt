@@ -50,6 +50,7 @@ A much more efficient algorithm would be some variation of Karatsuba's algorithm
 ### Division
 
 The equation *n*/*d* = *q* + *r* will be true of any integer division. Where *n* is the numerator, *d* denominator, *q* quotient, and *r* remainder. Using this an iterative process can be applied using the leading digit of *d* to find *q*.  
+The closer *d* is to *n* the less iterations are required.  
 A much more efficient algorithm would implement the Newton–Raphson method.
 
 <sup>§</sup> From 6.9.1-4 of the c++17 standard "Unsigned integers shall obey the laws of arithmetic modulo 2<sup>*n*</sup> where *n* is the number of bits in the value representation of that particular size integer"
