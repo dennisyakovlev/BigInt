@@ -4,9 +4,8 @@
 #include <functional>
 #include <Windows.h>
 
-// number of base_10 digits to test
-#ifndef SIZE_TEST_USER
-#define SIZE_TEST 1000
+#ifndef SIZE_TEST_USER // user defined test for size
+#define SIZE_TEST 10000 // number of base_10 digits to test
 #endif
 
 #ifdef SIZE_TEST_USER
@@ -46,6 +45,7 @@ void init_time(arr_elem_ty(&arr)[sz]) {
 
 }
 
+// call to check speed on current hardware
 void speed_test() {
 
     const arr_sz_ty size = SIZE_TEST;
