@@ -149,6 +149,7 @@ public:
     explicit BigUnsigned(sz_ty_ull size) : digits(size, 0) {}
 
     // remove the leading 0's
+    // if all 0's results in empty digits
     void resize_to_fit() {
 
         auto iter = std::find_if_not(digits.cbegin(), digits.cend(), [](auto i) {
@@ -396,19 +397,11 @@ BigUnsigned operator* (const BigUnsigned& l, const BigUnsigned& r) {
 
 }
 
-bool print = false;
-
 // Meant for positive only
-// Always returns lowest integer *i had this here for a reason but now i forget*
 BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
 
-    // std::cout << "\ndistance " << std::distance(start, end)  << std::endl;
-    // auto dis = std::distance(start, end);
     BigUnsigned res(std::distance(start, end));
     auto iter_res = res.digits.begin();
-
-    // std::copy(start, end, std::ostream_iterator<_ull>(std::cout, "|"));
-    // std::cout << std::endl;
 
     _ull carry = 0;
 
@@ -418,11 +411,7 @@ BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, t
         carry = *start - (digit * *iter_res); 
     }
 
-    // std::cout << *start << std::endl;
-
-    // *iter_res = (*start + digit + (carry * BASE)) / digit;
-
-    // res.resize_to_fit();
+    res.resize_to_fit();
 
     return res;
 
@@ -434,19 +423,11 @@ BigUnsigned divide(const BigUnsigned* const remainder, const BigUnsigned* const 
 
 }
 
+// Meant for negative only
 BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator start, typename BigUnsigned::cont_ull::const_iterator end, const _ull digit) {
 
-    // if (end - start == 1 && *start < digit) {
-    //     return BigUnsigned("0");
-    // }
-
-    // std::cout << "\ndistance " << std::distance(start, end)  << std::endl;
-    // auto dis = std::distance(start, end);
     BigUnsigned res(std::distance(start, end));
     auto iter_res = res.digits.begin();
-
-    // std::copy(start, end, std::ostream_iterator<_ull>(std::cout, "|"));
-    // std::cout << std::endl;
 
     _ull carry = 0;
 
@@ -455,10 +436,8 @@ BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator star
         // std::cout << "info: " << *iter_res << " " << *start << " " << digit << std::endl;
         carry = *start - (digit * *iter_res); 
     }
-
-    // std::cout << *start << std::endl;
-
-    *iter_res = (*start + digit + (carry * BASE)) / digit;
+    
+    *iter_res = (*start + digit + (carry * BASE)) / digit; // add digit since when negative integers rounded down is the same as rounding up when positive
 
     res.resize_to_fit();
 
@@ -468,9 +447,6 @@ BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator star
 
 BigUnsigned divide_neg(const BigUnsigned* const remainder, const BigUnsigned* const denom, const _ull digit) {
 
-    std::cout << "sending to: " << digit << "|";
-    std::copy(remainder->digits.cbegin(),remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), std::ostream_iterator<_ull>(std::cout, ","));
-    std::cout << std::endl;
     return divide_digit_neg(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
 
 }
@@ -479,7 +455,6 @@ BigUnsigned divide_neg(const BigUnsigned* const remainder, const BigUnsigned* co
 // c is some constant which is negligible since its close to 1
 // i dont care enough to use a fast division algorithm since they all require decimals
 // if needed will implement
-// Note: there is an issue here somewhere with it being 1 off
 BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
 
     _ui m = d.digits.size() - 1;
@@ -488,42 +463,16 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
     q.resize_to_fit();
     BigUnsigned r = d;
 
-    // std::cout << m << std::endl;
-    // std::cout << a << std::endl;
-    // std::cout << q << std::endl;
-    // std::cout << r << std::endl << std::endl;
-
-    // std::cout << "q size " << q.digits.size() << std::endl;
-
-    // if (q.digits.size() == 1) {
-    //     return q;
-    // }
-
-    if (n > q * d) {
+    if (n > q * d) { // division is complete
         return q;
     }
 
-    int i = 0;
-
-    while (r >= d) { // >= ?
+    while (r >= d) {
         r = n - (q * d);     
-        // print = true;
-        auto res = divide_neg(&r, &d, a);
-        // std::cout << res << "|" << r << "|" << d << "|" << a << std::endl;  
-        // print = false;
-        auto qn = q - res; // add 1 since r is technically negative
+        auto qn = q - divide_neg(&r, &d, a); 
         auto sum = q + qn;
         q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
-
-        // std::cout << "heh " << res << std::endl;
-        // std::cout << "Loop:\n" << r << "\n" << qn << "\n" << q << "\n" << std::endl;
     }
-
-    // r = n - (q * d);
-
-    // std::cout << "end "<< r << "| " << n << "| " << q << "| " << d << "| " << (n > (q * d)) << std::endl;
-
-
 
     return q;
 
