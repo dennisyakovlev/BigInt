@@ -5,7 +5,7 @@
 #include <Windows.h>
 
 #ifndef SIZE_TEST_USER // user defined test for size
-#define SIZE_TEST 10000 // number of base_10 digits to test
+#define SIZE_TEST 1000 // number of base_10 digits to test
 #endif
 
 #ifdef SIZE_TEST_USER
@@ -71,7 +71,19 @@ void speed_test() {
     auto t_add = time(std::function([](num_lg* a, num_lg* b){auto res = *a + *b;}), adr_1, adr_2);
     auto t_sub = time(std::function([](num_lg* a, num_lg* b){auto res = *a - *b;}), adr_1, adr_2);
     auto t_mul = time(std::function([](num_lg* a, num_lg* b){auto res = *a * *b;}), adr_1, adr_2);
-    auto t_div = time(std::function([](num_lg* a, num_lg* b){auto res = *a / *b;}), adr_1, adr_2);
+
+    const arr_sz_ty small_size = size / 10;
+    arr_elem_ty c[small_size];
+
+    for (arr_sz_ty i = 0; i != small_size; ++i) {
+        *(c + i) = i % 5;
+    }
+
+    num_lg num_3(c);
+
+    num_lg* adr_3 = std::addressof(num_3);
+
+    auto t_div = time(std::function([](num_lg* a, num_lg* b){auto res = *a / *b;}), adr_1, adr_3);
 
     std::cout << "All measurement are for " << size << " base 10 digits" << '\n' <<
     "Init time: " << t_init << "s" << '\n' <<
