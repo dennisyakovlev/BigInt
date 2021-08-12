@@ -468,11 +468,13 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
         return q;
     }
 
-    while (r >= d) {
+    while (r >= d && r.digits.size() > 0) {
         r = n - (q * d);     
-        auto qn = q - divide_neg(&r, &d, a); 
-        auto sum = q + qn;
-        q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
+        if (r.digits.size() > 0) {
+            auto qn = q - divide_neg(&r, &d, a); 
+            auto sum = q + qn;
+            q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
+        }
     }
 
     return q;
