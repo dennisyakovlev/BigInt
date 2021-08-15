@@ -304,7 +304,10 @@ BigUnsigned operator+ (const BigUnsigned& l, const BigUnsigned& r) {
     }
     
     if (carry != 0) {
-        result.digits.emplace(result.digits.cbegin(), carry);
+        // result.digits.emplace(result.digits.cbegin(), carry);
+        result.digits.emplace(std::find_if_not(result.digits.cbegin(), result.digits.cend(), [](auto val) {
+            return val == 0;
+        }), carry);
     }
 
     result.resize_to_fit();
@@ -478,5 +481,29 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
     }
 
     return q;
+
+}
+
+BigUnsigned pow(const BigUnsigned& base, const BigUnsigned& pow) {
+
+    BigUnsigned res("1");
+    auto base_copy = base;
+    auto pow_copy = pow;
+
+    while (pow_copy.digits.size() != 0) {
+        if (*pow_copy.digits.crbegin() % 2 == 1) {
+            res = base_copy * res;
+        }
+        pow_copy = pow_copy / BigUnsigned("2");
+        base_copy = base_copy * base_copy;
+    }
+
+    return res;
+
+}
+
+void BigUnsigned_10(const BigUnsigned& num) {
+
+    
 
 }
