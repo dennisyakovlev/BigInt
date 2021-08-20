@@ -13,7 +13,7 @@ C++ library for larger than natively supported unsigned integer operations. Mean
 ## Usage
 
 Download files and include BigInt.h. Compile along with project.  
-To check if working, include test.h and run "run_tests".  
+To check if working, include test.h and run "run_tests". Tests are for 64-bit operating systems.  
 To check speed of operations, include speed.h and run "speed_test". After approximately 1000 digits operations operations become slow.
 
 **Note**: Requires c++17 or higher.
