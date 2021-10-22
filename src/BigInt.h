@@ -1,6 +1,8 @@
 // Author: Dennis Yakovlev
 #pragma once
+#include <any>
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <iostream>
 #include <iterator>
@@ -26,6 +28,19 @@ constexpr _ui BASE_DIGITS_ALLOW = BASE_DIGITS - 1; // maximum number of digits a
                                                    // store one less than allowed digits to allow initialization
                                                    // without an if statement to see if number fits into digit
                                                    // Ex: 9999999999 doesnt fit into base 2^32 but 999999999 does
+
+
+_ui log_const(double num) {
+    _ui res = 0;
+    while (num > 0) {
+        num /= 2.0;
+        num = std::floor(num);
+        ++res;
+    }
+    return res;
+}
+static const _ui DOUBLE_CONVERSION = (log_const(DBL_MAX) / log_const(static_cast<double>(BASE))) - 1; // if the number of digits in the container is less than or
+                                                                                                      // or equal to this then a conversion can be used using double
 
 // ty must be integral and unsigned type
 template<typename ty, typename = std::enable_if_t<std::is_integral_v<ty> && std::is_unsigned_v<ty>>>
@@ -410,7 +425,6 @@ BigUnsigned divide_digit(typename BigUnsigned::cont_ull::const_iterator start, t
 
     for (; start != end; ++start, ++iter_res) {
         *iter_res = (*start + (carry * BASE)) / digit;
-        // std::cout << "info: " << *iter_res << " " << *start << " " << digit << std::endl;
         carry = *start - (digit * *iter_res); 
     }
 
@@ -436,7 +450,6 @@ BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator star
 
     for (; start != end - 1; ++start, ++iter_res) {
         *iter_res = (*start + (carry * BASE)) / digit;
-        // std::cout << "info: " << *iter_res << " " << *start << " " << digit << std::endl;
         carry = *start - (digit * *iter_res); 
     }
     
@@ -444,15 +457,20 @@ BigUnsigned divide_digit_neg(typename BigUnsigned::cont_ull::const_iterator star
 
     res.resize_to_fit();
 
+    // std::cout << "res: " << res << std::endl;
+
     return res;
 
 }
 
 BigUnsigned divide_neg(const BigUnsigned* const remainder, const BigUnsigned* const denom, const _ull digit) {
 
+    // std::cout << "hmm2 " << (remainder->digits.size() - denom->digits.size() + 1) << std::endl;
     return divide_digit_neg(remainder->digits.cbegin(), remainder->digits.cbegin() + (remainder->digits.size() - denom->digits.size() + 1), digit);
 
 }
+
+// issue when there is a 1 digit in numerator
 
 // theta(c * n.size * operator*) slow
 // c is some constant which is < 1
@@ -472,13 +490,20 @@ BigUnsigned operator/ (const BigUnsigned& n, const BigUnsigned& d) {
     }
 
     while (r >= d && r.digits.size() > 0) {
+        // std::cout << "u" << std::endl;
         r = n - (q * d);     
-        if (r.digits.size() > 0) {
+        if (r.digits.size() >= d.digits.size()) {
+            // std::cout << r << std::endl;
+            // std::cout << (r.digits.size()) << " " << (d.digits.size()) << std::endl;
+
             auto qn = q - divide_neg(&r, &d, a); 
             auto sum = q + qn;
             q = divide_digit(sum.digits.cbegin(), sum.digits.cend(), 2);
         }
     }
+
+    // std::cout << "done" << std::endl;
+
 
     return q;
 
@@ -502,8 +527,130 @@ BigUnsigned pow(const BigUnsigned& base, const BigUnsigned& pow) {
 
 }
 
-void BigUnsigned_10(const BigUnsigned& num) {
+template<typename T>
+T _add_10(T* l, T* r) {
 
+    auto longer = std::max(l, r, [](auto l, auto r) {
+        return l->size() < r->size();
+    });
     
+    auto shorter = std::min(l, r, [](auto l, auto r) {
+        return l->size() <= r->size();
+    });
+
+    T ret(longer->size());
+    auto ret_iter = ret.rbegin();
+    auto l_iter = longer->crbegin();
+    typename T::value_type carry = 0;
+    for (auto s_iter = shorter->crbegin(); s_iter != shorter->crend(); ++l_iter, ++s_iter, ++ret_iter) {
+        *ret_iter = (carry + *l_iter + *s_iter) % 10;
+        carry = (carry + *l_iter + *s_iter) >= 10 ? 1 : 0; 
+
+    }
+
+    for (; l_iter != longer->crend(); ++l_iter, ++ret_iter) {
+
+        *ret_iter = (carry + *l_iter) % 10;
+        carry = (carry + *l_iter) >= 10 ? 1 : 0; 
+
+    }
+
+    if (carry != 0) {
+        ret.insert(ret.cbegin(), carry);
+    }
+
+    return ret;
+
+}
+
+template<typename T>
+T _mult_10(T* l, T* r) {
+
+    T ret(1, 0);
+    for (auto iter_r = r->rbegin(); iter_r != r->rend(); ++iter_r) {
+        _ui shift = std::distance(r->rbegin(), iter_r);
+
+        T curr(l->size() + 1 + shift);
+        auto curr_iter = curr.rbegin();
+        for (_ui i = 0; i != shift; ++i, ++curr_iter) {
+            *curr_iter = 0;
+        }
+
+        typename T::value_type carry = 0;
+        for (auto iter_l = l->crbegin(); iter_l != l->crend(); ++iter_l, ++curr_iter) {
+            *curr_iter = (*iter_l * *iter_r + carry) % 10;
+            carry = ((*iter_l * *iter_r + carry) - *curr_iter) / 10;
+        }
+        *curr_iter = carry;
+
+        ret = _add_10(&ret, &curr);
+    }
+
+    return ret;
+
+}
+
+// return base 10 container representation of a bigunsigned
+// with most signficant digits in the container being lower index
+BigUnsigned::cont_ull BigUnsigned_10(const BigUnsigned& num) {
+
+    BigUnsigned::cont_ull base_vec(BASE_DIGITS);
+    BigUnsigned::cont_ull res(1, 0);
+
+    auto base = BASE;
+    for (auto iter = base_vec.rbegin(); iter != base_vec.rend(); ++iter) {
+        *iter = base % 10;
+        base /= 10;
+    }
+    BigUnsigned::cont_ull power_curr_vec{1};
+
+    using value_ty = BigUnsigned::cont_ull::value_type;
+
+    for (auto iter = num.digits.crbegin(); iter != num.digits.crend(); ++iter) {
+
+        BigUnsigned::cont_ull digit_cont;
+        BigUnsigned::cont_ull::value_type digit = *iter;
+        while (digit > 0) {
+            digit_cont.insert(digit_cont.begin(), digit % 10);
+            digit /= 10;
+        }
+
+        auto temp = _mult_10(&digit_cont, &power_curr_vec);
+        res = _add_10(&res, &temp);
+
+        power_curr_vec = _mult_10(&power_curr_vec, &base_vec);
+
+    }
+
+    auto iter = std::find_if_not(res.cbegin(), res.cend(), [](auto i) {
+            return i == 0;
+    });
+
+    if (iter != res.cbegin()) {
+        return BigUnsigned::cont_ull(iter, res.cend());
+    }
+
+    return res;
+
+}
+
+// return base 10 double representation of a bigunsigned if possible
+// if not, return -1
+double BigUnsigned_10_dbl(const BigUnsigned& num) {
+    // if -1 is returned then use BigUnsigned_10
+    // Note: double is not accurate, use other function for guarnteed accuracy
+
+    if (num.digits.size() > DOUBLE_CONVERSION) {
+        return -1;
+    }
+
+    double res = 0.0;
+    double i = 0;
+    for (auto iter = num.digits.rbegin(); iter != num.digits.rend(); ++iter) {
+        res += pow(static_cast<double>(BASE), i) * static_cast<double>(*iter);
+        ++i;
+    }
+
+    return res;
 
 }

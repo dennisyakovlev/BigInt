@@ -590,6 +590,8 @@ T _mult_10(T* l, T* r) {
 
 }
 
+// return base 10 container representation of a bigunsigned
+// with most signficant digits in the container being lower index
 BigUnsigned::cont_ull BigUnsigned_10(const BigUnsigned& num) {
 
     BigUnsigned::cont_ull base_vec(BASE_DIGITS);
@@ -632,6 +634,8 @@ BigUnsigned::cont_ull BigUnsigned_10(const BigUnsigned& num) {
 
 }
 
+// return base 10 double representation of a bigunsigned if possible
+// if not, return -1
 double BigUnsigned_10_dbl(const BigUnsigned& num) {
     // if -1 is returned then use BigUnsigned_10
     // Note: double is not accurate, use other function for guarnteed accuracy
