@@ -1,5 +1,5 @@
 #pragma once
-#include <ver5.h> // include latest working version
+#include <ver6.h> // include latest working version
                   // change to BigInt.h
 #include <functional>
 #include <Windows.h>
